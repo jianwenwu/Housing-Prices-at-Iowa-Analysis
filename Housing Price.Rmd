@@ -1,0 +1,83 @@
+---
+title: "Housing Price"
+author: "jianwen wu"
+date: "4/27/2019"
+output: html_document
+---
+
+```{r Load Libraries}
+library(tidyverse)
+```
+
+
+```{r Import the data}
+train_df <- read_csv("data/training.csv")
+
+test_df <- read_csv("data/validation.csv")
+```
+
+```{r str of data}
+
+map(
+  train_df, .f = function(x){
+    class(x)
+  }
+) %>% 
+  as_tibble() %>%
+  gather()
+
+# separete the numerical variables and categorical variables
+num_cols <- train_df %>%
+  select_if(is.numeric) 
+
+cat_cols <- train_df %>%
+  select_if(is.character)
+
+
+# working on numerical data
+
+train_df %>%
+  select_if(is.numeric) %>%
+  select(-Id) %>%
+  select(MSSubClass:TotalBsmtSF) %>%
+  select_if(is.numeric) %>%
+  plot_hist_facet(ncol = 4)
+
+train_df %>%
+  select_if(is.numeric) %>%
+  select(-Id) %>%
+  select(X1stFlrSF:Fireplaces) %>%
+  select_if(is.numeric) %>%
+  plot_hist_facet(ncol = 4)
+
+train_df %>%
+  select_if(is.numeric) %>%
+  select(-Id) %>%
+  select(GarageYrBlt:SalePrice) %>%
+  select_if(is.numeric) %>%
+  plot_hist_facet(ncol = 4)
+
+```
+
+
+
+```{r Explore the data}
+
+# check the No. of missing values in each variable
+train_df %>%
+  map(.f = function(x){
+    sum(is.na(x))
+  })  %>%
+  as_tibble() %>%
+  gather(key = "Varible", value =  "Number_of_Missing_Value") %>%
+  arrange(desc(Number_of_Missing_Value)) %>%
+  mutate(Percentage = round(Number_of_Missing_Value / nrow(train_df) * 100,3))
+ 
+```
+
+```{r}
+
+
+
+```
+
