@@ -5,8 +5,13 @@ date: "4/27/2019"
 output: html_document
 ---
 
+
+
 ```{r Load Libraries}
 library(tidyverse)
+library(h2o)
+
+h2o.init(max_mem_size = "4g")
 ```
 
 
@@ -15,6 +20,8 @@ train_df <- read_csv("data/training.csv")
 
 test_df <- read_csv("data/validation.csv")
 ```
+
+#1. Data Processing
 
 ```{r str of data}
 
@@ -26,16 +33,11 @@ map(
   as_tibble() %>%
   gather()
 
-# separete the numerical variables and categorical variables
-num_cols <- train_df %>%
-  select_if(is.numeric) 
-
-cat_cols <- train_df %>%
-  select_if(is.character)
+```
 
 
-# working on numerical data
-
+###1.1 working on numerical data
+```{r numerical}
 train_df %>%
   select_if(is.numeric) %>%
   select(-Id) %>%
@@ -60,6 +62,25 @@ train_df %>%
 ```
 
 
+We know there are many numerical variables are actually categorical variables. We need to transform those. Those are:
+
+* MSSubClass
+* OverallCond
+* YrSold
+* MoSold
+
+```{r transform}
+train_df %>%
+  mutate(MSSubClass = as.factor(MSSubClass),
+         OverallCond = as.factor(OverallCond),
+         YrSold = as.factor(YrSold), 
+         MoSold = as.factor(MoSold)) %>%
+  select(MSSubClass, OverallCond, YrSold, MoSold) 
+
+
+```
+
+###1.2 working on categorical data
 
 ```{r Explore the data}
 
@@ -72,12 +93,29 @@ train_df %>%
   gather(key = "Varible", value =  "Number_of_Missing_Value") %>%
   arrange(desc(Number_of_Missing_Value)) %>%
   mutate(Percentage = round(Number_of_Missing_Value / nrow(train_df) * 100,3))
- 
+
 ```
 
+
+#2 Modeling
 ```{r}
 
+train_df_trans <- train_df %>%
+  mutate(MSSubClass = as.factor(MSSubClass),
+         OverallCond = as.factor(OverallCond),
+         YrSold = as.factor(YrSold), 
+         MoSold = as.factor(MoSold)) %>%
+  mutate_if(base::is.character, base::as.factor) %>%
+  select(-Id)
+
+train_df_trans_h2o <- as.h2o(train_df_trans)
+Y <- "SalePrice"
+X <- setdiff(names(train_df_trans_h2o), Y)
+prices_auml <- h2o.automl(x = X,
+                          y = Y, 
+                          nfolds = 5, training_frame = train_df_trans_h2o, max_runtime_secs = 3600)
 
 
+prices_auml@leaderboard
 ```
 
