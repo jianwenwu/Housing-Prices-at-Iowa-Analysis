@@ -4,14 +4,13 @@ author: "jianwen wu"
 date: "4/27/2019"
 output: html_document
 ---
-
-123
-
+#1. Set Up
 ```{r Load Libraries}
 library(tidyverse)
 library(h2o)
 
 h2o.init(max_mem_size = "4g")
+source("scripts/housing_prices_functions.R")
 ```
 
 
@@ -21,8 +20,9 @@ train_df <- read_csv("data/training.csv")
 test_df <- read_csv("data/validation.csv")
 ```
 
-#1. Data Processing
+#2. Data Understanding
 
+###2.1 structure of data
 ```{r str of data}
 
 map(
@@ -35,8 +35,21 @@ map(
 
 ```
 
+###2.2 checking the missing value
+```{r}
+train_df %>%
+  map(.f = function(x){
+    sum(is.na(x))
+  })  %>%
+  as_tibble() %>%
+  gather(key = "Varible", value =  "Number_of_Missing_Value") %>%
+  arrange(desc(Number_of_Missing_Value)) %>%
+  mutate(Percentage = round(Number_of_Missing_Value / nrow(train_df) * 100,3))
+```
 
-###1.1 working on numerical data
+#3. Data Processing
+
+###3.1 working on numerical data
 ```{r numerical}
 train_df %>%
   select_if(is.numeric) %>%
@@ -62,42 +75,41 @@ train_df %>%
 ```
 
 
-We know there are many numerical variables are actually categorical variables. We need to transform those. Those are:
+We know there are many numerical variables are actually categorical variables. We need to transform variables below into factors.
 
 * MSSubClass
 * OverallCond
 * YrSold
 * MoSold
 
+We also need to removed the variable "Id"
+
 ```{r transform}
-train_df %>%
+#convert into factors
+train_df <- train_df %>%
   mutate(MSSubClass = as.factor(MSSubClass),
          OverallCond = as.factor(OverallCond),
          YrSold = as.factor(YrSold), 
          MoSold = as.factor(MoSold)) %>%
-  select(MSSubClass, OverallCond, YrSold, MoSold) 
+  select(-Id)#remove Id
+
+```
+
+###3.2 working on categorical data
+
+```{r}
 
 
 ```
 
-###1.2 working on categorical data
-
-```{r Explore the data}
-
-# check the No. of missing values in each variable
-train_df %>%
-  map(.f = function(x){
-    sum(is.na(x))
-  })  %>%
-  as_tibble() %>%
-  gather(key = "Varible", value =  "Number_of_Missing_Value") %>%
-  arrange(desc(Number_of_Missing_Value)) %>%
-  mutate(Percentage = round(Number_of_Missing_Value / nrow(train_df) * 100,3))
-
-```
+###3.3 working on missing value
 
 
-#2 Modeling
+###3.4 working on outlier
+
+
+
+#4 Modeling
 ```{r}
 
 train_df_trans <- train_df %>%
