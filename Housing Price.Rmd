@@ -18,6 +18,14 @@ source("scripts/housing_prices_functions.R")
 train_df <- read_csv("data/training.csv")
 
 test_df <- read_csv("data/validation.csv")
+
+```
+
+
+Combine the train_df and test_df. I want to make sure both train and test data have same levels of factor.  I can separete them again by the ID.
+```{r}
+df <- train_df %>%
+  bind_rows(test_df)
 ```
 
 
@@ -27,7 +35,7 @@ test_df <- read_csv("data/validation.csv")
 ```{r str of data}
 
 map(
-  train_df, .f = function(x){
+  df, .f = function(x){
     class(x)
   }
 ) %>% 
@@ -40,23 +48,23 @@ map(
 
 # 3. Data Processing
 
-### 3.1 Numerical Variables
+### 3.1 Numerical Variables 
 ```{r numerical}
-train_df %>%
+df %>%
   select_if(is.numeric) %>%
   select(-Id) %>%
   select(MSSubClass:TotalBsmtSF) %>%
   select_if(is.numeric) %>%
   plot_hist_facet(ncol = 4)
 
-train_df %>%
+df %>%
   select_if(is.numeric) %>%
   select(-Id) %>%
   select(X1stFlrSF:Fireplaces) %>%
   select_if(is.numeric) %>%
   plot_hist_facet(ncol = 4)
 
-train_df %>%
+df %>%
   select_if(is.numeric) %>%
   select(-Id) %>%
   select(GarageYrBlt:SalePrice) %>%
@@ -77,7 +85,7 @@ We also need to removed the variable "Id"
 
 ```{r transform}
 #convert into factors
-train_df <- train_df %>%
+df <- df %>%
   mutate(MSSubClass = as.factor(MSSubClass),
          OverallCond = as.factor(OverallCond),
          YrSold = as.factor(YrSold), 
@@ -85,22 +93,155 @@ train_df <- train_df %>%
   select(-Id)#remove Id
 
 #check the levels
-train_df %>%
+df %>%
   select(MSSubClass, OverallCond, YrSold, MoSold) %>%
   map(levels)
 ```
 
+### 3.2 Missing values
 
-### 3.2 Categorical Variables
-
-We need to convert all categroical variables into factors
 ```{r}
+df %>%
+  map(.f = function(x){
+    sum(is.na(x))
+  })  %>%
+  as_tibble() %>%
+  gather(key = "Varible", value =  "Number_of_Missing_Value") %>%
+  arrange(desc(Number_of_Missing_Value)) %>%
+  mutate(Percentage = round(Number_of_Missing_Value / nrow(df) * 100,3))
+```
 
+##### 3.21
+According to the data description, NA refers to "None" for the variables below. We are going to fill NA with None for those variables
+
+For example, PoolQC with NA means No PoolQC
+
+* PoolQC
+* MiscFeatur
+* Alley
+* Fence
+* FireplaceQu
+* GarageType
+* GarageFinish
+* GarageQual
+* GarageCond
+* BsmtQual
+* BsmtCond
+* BsmtExposure
+* BsmtFinType1
+* BsmtFinType2
+
+```{r}
+NA_cols_None <- c("PoolQC",
+"MiscFeature",
+"Alley",
+"Fence",
+"FireplaceQu",
+"GarageType",
+"GarageFinish",
+"GarageQual",
+"GarageCond",
+"BsmtQual",
+"BsmtCond",
+"BsmtExposure",
+"BsmtFinType1",
+"BsmtFinType2",
+"MasVnrType",
+"MSSubClass")
+
+df[,NA_cols_None][is.na(df[,NA_cols_None])] <- "None"
+
+df[,NA_cols_None] %>%
+  map(~table(.))
+```
+
+##### 3.22
+We are going to fill NA with median of LotFrotage group by Neighborhood
+
+* LotFrontage
+
+```{r}
+df <- df %>%
+  group_by(Neighborhood) %>%
+  mutate(LotFrontage = replace_na(LotFrontage, replace = median(LotFrontage, na.rm = T))) %>%
+  ungroup()
+```
+
+##### 3.23
+We are going to fill NA with 0 for the variables below:
+
+* GarageYrBlt
+* GarageArea
+* GarageCars
+* BsmtFinSF1
+* BsmtFinSF2
+* BsmtUnfSF
+* TotalBsmtSF
+* BsmtFullBath
+* BsmtHalfBath
+* MasVnrArea
+
+```{r}
+NA_cols_0 <- (c(
+"GarageYrBlt",
+"GarageArea",
+"GarageCars",
+"BsmtFinSF1",
+"BsmtFinSF2",
+"BsmtUnfSF",
+"TotalBsmtSF",
+"BsmtFullBath",
+"BsmtHalfBath",
+"MasVnrArea"
+))
+
+df[,NA_cols_0][is.na(df[,NA_cols_0])] <- 0
+```
+
+#### 3.24
+
+* Electrical - only has one NA value, I am going to assign it to SBrkr. Since this variable contains 91% SBrkr.
+
+```{r}
+df %>%
+  count(Electrical) %>%
+  mutate(pct = n / sum(n))
+
+df <- df %>%
+  mutate(Electrical = str_replace_na(string = Electrical, replacement = "SBrkr"))
 
 ```
 
 
+```{r}
+df %>%
+  map(.f = function(x){
+    sum(is.na(x))
+  })  %>%
+  as_tibble() %>%
+  gather(key = "Varible", value =  "Number_of_Missing_Value") %>%
+  arrange(desc(Number_of_Missing_Value)) %>%
+  mutate(Percentage = round(Number_of_Missing_Value / nrow(df) * 100,3))
+```
 
+### 3.3 Categorical Variables
+
+* Convert the Categorical Variables into Factors
+
+* Fix the levels of factors
+```{r}
+df %>%
+  select_if(is.character) %>%
+  map(~table(.))
+
+
+df_model <- df %>%
+  mutate_if(base::is.character, base::as.factor)
+
+df_model %>%
+  select_if(base::is.factor) %>%
+  map(levels)
+```
 
 
 
@@ -212,122 +353,6 @@ glue::glue("The Skewness is: {round(skewness(train_df_rm_outlier$Log_Sales_Price
 Now, the target variable SalePrice are more normally distributed.
 
 
-### 3.5 Missing values
-
-```{r}
-train_df_rm_outlier %>%
-  map(.f = function(x){
-    sum(is.na(x))
-  })  %>%
-  as_tibble() %>%
-  gather(key = "Varible", value =  "Number_of_Missing_Value") %>%
-  arrange(desc(Number_of_Missing_Value)) %>%
-  mutate(Percentage = round(Number_of_Missing_Value / nrow(train_df) * 100,3))
-```
-
-##### 3.51
-According to the data description, NA refers to "None" for the variables below. We are going to fill NA with None for those variables
-
-For example, PoolQC with NA means No PoolQC
-
-* PoolQC
-* MiscFeatur
-* Alley
-* Fence
-* FireplaceQu
-* GarageType
-* GarageFinish
-* GarageQual
-* GarageCond
-* BsmtQual
-* BsmtCond
-* BsmtExposure
-* BsmtFinType1
-* BsmtFinType2
-
-```{r}
-NA_cols_None <- c("PoolQC",
-"MiscFeature",
-"Alley",
-"Fence",
-"FireplaceQu",
-"GarageType",
-"GarageFinish",
-"GarageQual",
-"GarageCond",
-"BsmtQual",
-"BsmtCond",
-"BsmtExposure",
-"BsmtFinType1",
-"BsmtFinType2",
-"MasVnrType",
-"MSSubClass")
-
-train_df_rm_outlier[,NA_cols_None][is.na(train_df_rm_outlier[,NA_cols_None])] <- "None"
-
-train_df_rm_outlier[,NA_cols_None] %>%
-  map(~table(.))
-```
-
-##### 3.52
-We are going to fill NA with median of LotFrotage group by Neighborhood
-
-* LotFrontage
-
-```{r}
-# train_df_rm_outlier %>%
-#   group_by(Neighborhood) %>%
-#   summarise(median = median(LotFrontage, na.rm = T))
-# train_df_rm_outlier %>%
-#   select(Neighborhood,LotFrontage )
-train_df_rm_outlier <- train_df_rm_outlier %>%
-  group_by(Neighborhood) %>%
-  mutate(LotFrontage = replace_na(LotFrontage, replace = median(LotFrontage, na.rm = T))) %>%
-  ungroup()
-```
-
-##### 3.53
-We are going to fill NA with 0 for the variables below:
-
-* GarageYrBlt
-* GarageArea
-* GarageCars
-* BsmtFinSF1
-* BsmtFinSF2
-* BsmtUnfSF
-* TotalBsmtSF
-* BsmtFullBath
-* BsmtHalfBath
-* MasVnrArea
-
-```{r}
-NA_cols_0 <- (c(
-"GarageYrBlt",
-"GarageArea",
-"GarageCars",
-"BsmtFinSF1",
-"BsmtFinSF2",
-"BsmtUnfSF",
-"TotalBsmtSF",
-"BsmtFullBath",
-"BsmtHalfBath",
-"MasVnrArea"
-))
-
-train_df_rm_outlier[,NA_cols_0][is.na(train_df_rm_outlier[,NA_cols_0])] <- 0
-```
-
-
-```{r}
-train_df_rm_outlier %>%
-  map(.f = function(x){
-    sum(is.na(x))
-  })  %>%
-  as_tibble() %>%
-  gather(key = "Varible", value =  "Number_of_Missing_Value") %>%
-  arrange(desc(Number_of_Missing_Value)) %>%
-  mutate(Percentage = round(Number_of_Missing_Value / nrow(train_df) * 100,3))
-```
 
 
 
@@ -336,14 +361,14 @@ train_df_rm_outlier %>%
 #4 Modeling
 ```{r}
 
-train_df_trans <- train_df %>%
+train_df_trans <- train_df_rm_outlier %>%
   mutate(MSSubClass = as.factor(MSSubClass),
          OverallCond = as.factor(OverallCond),
          YrSold = as.factor(YrSold), 
          MoSold = as.factor(MoSold)) %>%
   mutate_if(base::is.character, base::as.factor) %>%
-  select(-Id)
-
+  select(-Log_Sales_Price)
+#0.00442084
 
 test_df <- test_df %>%
   mutate(MSSubClass = as.factor(MSSubClass),
@@ -364,8 +389,8 @@ prices_auml <- h2o.automl(x = X,
                           nfolds = 5, training_frame = train_df_trans_h2o, max_runtime_secs = 3600)
 
 
-prices_auml@leader %>%
-  h2o.performance(newdata = test_df) 
-
-h2o.mse()
+Price_lm <- h2o.glm(x = X,
+                    y = Y,training_frame = train_df_trans_h2o,lambda = 0)
+Price_lm 
+  
 ```
