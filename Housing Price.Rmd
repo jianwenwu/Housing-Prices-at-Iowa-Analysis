@@ -241,14 +241,21 @@ df_model <- df %>%
 df_model %>%
   select_if(base::is.factor) %>%
   map(levels)
+
+index <- train_df$Id
+
+df_model_train <- df_model %>%
+  filter(Id %in% index)
+  
+df_model_test <- df_model %>%
+  filter(Id %in% index == F)
+
 ```
-
-
 
 ### 3.3 Outliers
 
 ```{r}
-train_df %>%
+df_model_train %>%
   select_if(is.numeric) %>%
   select(LotFrontage:BsmtHalfBath,SalePrice) %>%
   reshape2::melt(id="SalePrice") %>%
@@ -258,7 +265,7 @@ train_df %>%
   facet_wrap( ~ variable, ncol = 4) +
   labs(x = "Variable")
 
-train_df %>%
+df_model_train %>%
   select_if(is.numeric) %>%
   select(FullBath:MiscVal,SalePrice) %>%
   reshape2::melt(id="SalePrice") %>%
@@ -290,7 +297,7 @@ scatter_plot <- function(data, x, y = SalePrice){
     theme_bw()
 }
 
-train_df %>%
+df_model_train %>%
   scatter_plot(x = GrLivArea)
 
 
@@ -300,10 +307,10 @@ It seem like it's more safe to remove the outliers. Those outliers are huge and 
 
 ```{r}
 # removing outliers recomended by author
-train_df_rm_outlier <- train_df %>%
+df_model_train <- df_model_train %>%
   filter(GrLivArea < 4000)
 
-train_df_rm_outlier %>%
+df_model_train %>%
   scatter_plot(x = GrLivArea)
 
 ```
@@ -314,13 +321,13 @@ There might be more outliers in other variables, but removing all of them might 
 
 ```{r}
 #Histogram of SalePrice
-train_df_rm_outlier %>%
+df_model_train %>%
   ggplot(aes()) +
   geom_histogram(aes(SalePrice), fill = "white", 
                  color = "black", bins = 30)  +
   theme_bw()
 #QQ plot of SalePrice
-car::qqPlot(train_df_rm_outlier$SalePrice, 
+car::qqPlot(df_model_train$SalePrice, 
             ylab = "SalesPrice")
 #Skewness of SalePrice
 glue::glue("The Skewness is: {round(skewness(
@@ -334,20 +341,20 @@ The target variable SalePrice is right skewed.  We need to transform the target 
 We are going to use log-transformation
 ```{r}
 #Create a log SalePrice variable
-train_df_rm_outlier$Log_Sales_Price <- log(train_df_rm_outlier$SalePrice)
-
+df_model_train$Log_Sales_Price <- log(df_model_train$SalePrice)
+df_model_test$Log_Sales_Price <- log(df_model_test$SalePrice)
 #Histogram of log SalePrice
-train_df_rm_outlier %>%
+df_model_train %>%
   ggplot(aes()) +
   geom_histogram(aes(Log_Sales_Price), fill = "white", 
                  color = "black", bins = 30)  +
   theme_bw()
 
 #QQ plot of log SalePrice
-car::qqPlot(log(train_df_rm_outlier$Log_Sales_Price), 
+car::qqPlot(log(df_model_train$Log_Sales_Price), 
             ylab = "Log SalesPrice")
 #Skewness of log SalePrice
-glue::glue("The Skewness is: {round(skewness(train_df_rm_outlier$Log_Sales_Price),4)}")
+glue::glue("The Skewness is: {round(skewness(df_model_train$Log_Sales_Price),4)}")
 
 ```
 Now, the target variable SalePrice are more normally distributed.
@@ -361,36 +368,27 @@ Now, the target variable SalePrice are more normally distributed.
 #4 Modeling
 ```{r}
 
-train_df_trans <- train_df_rm_outlier %>%
-  mutate(MSSubClass = as.factor(MSSubClass),
-         OverallCond = as.factor(OverallCond),
-         YrSold = as.factor(YrSold), 
-         MoSold = as.factor(MoSold)) %>%
-  mutate_if(base::is.character, base::as.factor) %>%
-  select(-Log_Sales_Price)
-#0.00442084
-
-test_df <- test_df %>%
-  mutate(MSSubClass = as.factor(MSSubClass),
-         OverallCond = as.factor(OverallCond),
-         YrSold = as.factor(YrSold), 
-         MoSold = as.factor(MoSold)) %>%
-  mutate_if(base::is.character, base::as.factor) %>%
-  select(-Id)
 
 
-train_df_trans_h2o <- as.h2o(train_df_trans)
-test_df <- as.h2o(test_df)
 
-Y <- "SalePrice"
+
+train_h2o <- as.h2o(df_model_train %>%
+                               select(-Id, -SalePrice))
+
+test_h2o <- as.h2o(df_model_test %>%
+                               select(-Id, -SalePrice))
+
+
+Y <- "Log_Sales_Price"
 X <- setdiff(names(train_df_trans_h2o), Y)
-prices_auml <- h2o.automl(x = X,
-                          y = Y, 
-                          nfolds = 5, training_frame = train_df_trans_h2o, max_runtime_secs = 3600)
+# prices_auml <- h2o.automl(x = X,
+#                           y = Y, 
+#                           nfolds = 5, training_frame = train_df_trans_h2o, max_runtime_secs = 3600)
 
 
 Price_lm <- h2o.glm(x = X,
-                    y = Y,training_frame = train_df_trans_h2o,lambda = 0)
-Price_lm 
+                    y = Y,training_frame = train_h2o,lambda = 0)
+Price_lm %>%
+  h2o.performance(newdata = test_h2o)
   
 ```
