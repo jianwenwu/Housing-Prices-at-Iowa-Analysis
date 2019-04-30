@@ -1,0 +1,371 @@
+---
+title: "Housing Price"
+author: "jianwen wu"
+date: "4/27/2019"
+output: html_document
+---
+# 1. Set Up
+```{r Load Libraries}
+library(tidyverse)
+library(h2o)
+
+h2o.init(max_mem_size = "4g")
+source("scripts/housing_prices_functions.R")
+```
+
+
+```{r Import the data}
+train_df <- read_csv("data/training.csv")
+
+test_df <- read_csv("data/validation.csv")
+```
+
+
+# 2. Data Understanding
+
+### 2.1 structure of data
+```{r str of data}
+
+map(
+  train_df, .f = function(x){
+    class(x)
+  }
+) %>% 
+  as_tibble() %>%
+  gather()
+
+```
+
+
+
+# 3. Data Processing
+
+### 3.1 Numerical Variables
+```{r numerical}
+train_df %>%
+  select_if(is.numeric) %>%
+  select(-Id) %>%
+  select(MSSubClass:TotalBsmtSF) %>%
+  select_if(is.numeric) %>%
+  plot_hist_facet(ncol = 4)
+
+train_df %>%
+  select_if(is.numeric) %>%
+  select(-Id) %>%
+  select(X1stFlrSF:Fireplaces) %>%
+  select_if(is.numeric) %>%
+  plot_hist_facet(ncol = 4)
+
+train_df %>%
+  select_if(is.numeric) %>%
+  select(-Id) %>%
+  select(GarageYrBlt:SalePrice) %>%
+  select_if(is.numeric) %>%
+  plot_hist_facet(ncol = 4)
+
+```
+
+
+We know there are many numerical variables are actually categorical variables. We need to transform variables below into factors.
+
+* MSSubClass
+* OverallCond
+* YrSold
+* MoSold
+
+We also need to removed the variable "Id"
+
+```{r transform}
+#convert into factors
+train_df <- train_df %>%
+  mutate(MSSubClass = as.factor(MSSubClass),
+         OverallCond = as.factor(OverallCond),
+         YrSold = as.factor(YrSold), 
+         MoSold = as.factor(MoSold)) %>%
+  select(-Id)#remove Id
+
+#check the levels
+train_df %>%
+  select(MSSubClass, OverallCond, YrSold, MoSold) %>%
+  map(levels)
+```
+
+
+### 3.2 Categorical Variables
+
+We need to convert all categroical variables into factors
+```{r}
+
+
+```
+
+
+
+
+
+
+### 3.3 Outliers
+
+```{r}
+train_df %>%
+  select_if(is.numeric) %>%
+  select(LotFrontage:BsmtHalfBath,SalePrice) %>%
+  reshape2::melt(id="SalePrice") %>%
+  ggplot(aes(value, SalePrice)) +
+  geom_point() +
+  theme_bw() +
+  facet_wrap( ~ variable, ncol = 4) +
+  labs(x = "Variable")
+
+train_df %>%
+  select_if(is.numeric) %>%
+  select(FullBath:MiscVal,SalePrice) %>%
+  reshape2::melt(id="SalePrice") %>%
+  ggplot(aes(value, SalePrice)) +
+  geom_point() +
+  theme_bw() +
+  facet_wrap( ~ variable, ncol = 4) +
+  labs(x = "Variable")
+
+
+```
+
+From the graph above, we can see there are outlier in the variables below,
+
+
+* GarageArea
+
+
+Let plot those variables vs sales prices in a bigger plot.
+
+```{r}
+scatter_plot <- function(data, x, y = SalePrice){
+  x_var <- enquo(x)
+  y_var <- enquo(y)
+  
+  data %>%
+    ggplot(aes(!!x_var, !!y_var)) +
+    geom_point() +
+    theme_bw()
+}
+
+train_df %>%
+  scatter_plot(x = GrLivArea)
+
+
+```
+
+It seem like it's more safe to remove the outliers. Those outliers are huge and bad.
+
+```{r}
+# removing outliers recomended by author
+train_df_rm_outlier <- train_df %>%
+  filter(GrLivArea < 4000)
+
+train_df_rm_outlier %>%
+  scatter_plot(x = GrLivArea)
+
+```
+
+There might be more outliers in other variables, but removing all of them might affect our model. such as less observation, and there might be outliers in our test data as well.  Therefore, we just removed the outlier for variable "GrlivArea".
+
+### 3.4 Skewness of Target Varible - SalePrice
+
+```{r}
+#Histogram of SalePrice
+train_df_rm_outlier %>%
+  ggplot(aes()) +
+  geom_histogram(aes(SalePrice), fill = "white", 
+                 color = "black", bins = 30)  +
+  theme_bw()
+#QQ plot of SalePrice
+car::qqPlot(train_df_rm_outlier$SalePrice, 
+            ylab = "SalesPrice")
+#Skewness of SalePrice
+glue::glue("The Skewness is: {round(skewness(
+           train_df_rm_outlier$SalePrice),4)}")
+
+
+```
+
+The target variable SalePrice is right skewed.  We need to transform the target variable SalePrice into more normally distributed.
+
+We are going to use log-transformation
+```{r}
+#Create a log SalePrice variable
+train_df_rm_outlier$Log_Sales_Price <- log(train_df_rm_outlier$SalePrice)
+
+#Histogram of log SalePrice
+train_df_rm_outlier %>%
+  ggplot(aes()) +
+  geom_histogram(aes(Log_Sales_Price), fill = "white", 
+                 color = "black", bins = 30)  +
+  theme_bw()
+
+#QQ plot of log SalePrice
+car::qqPlot(log(train_df_rm_outlier$Log_Sales_Price), 
+            ylab = "Log SalesPrice")
+#Skewness of log SalePrice
+glue::glue("The Skewness is: {round(skewness(train_df_rm_outlier$Log_Sales_Price),4)}")
+
+```
+Now, the target variable SalePrice are more normally distributed.
+
+
+### 3.5 Missing values
+
+```{r}
+train_df_rm_outlier %>%
+  map(.f = function(x){
+    sum(is.na(x))
+  })  %>%
+  as_tibble() %>%
+  gather(key = "Varible", value =  "Number_of_Missing_Value") %>%
+  arrange(desc(Number_of_Missing_Value)) %>%
+  mutate(Percentage = round(Number_of_Missing_Value / nrow(train_df) * 100,3))
+```
+
+##### 3.51
+According to the data description, NA refers to "None" for the variables below. We are going to fill NA with None for those variables
+
+For example, PoolQC with NA means No PoolQC
+
+* PoolQC
+* MiscFeatur
+* Alley
+* Fence
+* FireplaceQu
+* GarageType
+* GarageFinish
+* GarageQual
+* GarageCond
+* BsmtQual
+* BsmtCond
+* BsmtExposure
+* BsmtFinType1
+* BsmtFinType2
+
+```{r}
+NA_cols_None <- c("PoolQC",
+"MiscFeature",
+"Alley",
+"Fence",
+"FireplaceQu",
+"GarageType",
+"GarageFinish",
+"GarageQual",
+"GarageCond",
+"BsmtQual",
+"BsmtCond",
+"BsmtExposure",
+"BsmtFinType1",
+"BsmtFinType2",
+"MasVnrType",
+"MSSubClass")
+
+train_df_rm_outlier[,NA_cols_None][is.na(train_df_rm_outlier[,NA_cols_None])] <- "None"
+
+train_df_rm_outlier[,NA_cols_None] %>%
+  map(~table(.))
+```
+
+##### 3.52
+We are going to fill NA with median of LotFrotage group by Neighborhood
+
+* LotFrontage
+
+```{r}
+# train_df_rm_outlier %>%
+#   group_by(Neighborhood) %>%
+#   summarise(median = median(LotFrontage, na.rm = T))
+# train_df_rm_outlier %>%
+#   select(Neighborhood,LotFrontage )
+train_df_rm_outlier <- train_df_rm_outlier %>%
+  group_by(Neighborhood) %>%
+  mutate(LotFrontage = replace_na(LotFrontage, replace = median(LotFrontage, na.rm = T))) %>%
+  ungroup()
+```
+
+##### 3.53
+We are going to fill NA with 0 for the variables below:
+
+* GarageYrBlt
+* GarageArea
+* GarageCars
+* BsmtFinSF1
+* BsmtFinSF2
+* BsmtUnfSF
+* TotalBsmtSF
+* BsmtFullBath
+* BsmtHalfBath
+* MasVnrArea
+
+```{r}
+NA_cols_0 <- (c(
+"GarageYrBlt",
+"GarageArea",
+"GarageCars",
+"BsmtFinSF1",
+"BsmtFinSF2",
+"BsmtUnfSF",
+"TotalBsmtSF",
+"BsmtFullBath",
+"BsmtHalfBath",
+"MasVnrArea"
+))
+
+train_df_rm_outlier[,NA_cols_0][is.na(train_df_rm_outlier[,NA_cols_0])] <- 0
+```
+
+
+```{r}
+train_df_rm_outlier %>%
+  map(.f = function(x){
+    sum(is.na(x))
+  })  %>%
+  as_tibble() %>%
+  gather(key = "Varible", value =  "Number_of_Missing_Value") %>%
+  arrange(desc(Number_of_Missing_Value)) %>%
+  mutate(Percentage = round(Number_of_Missing_Value / nrow(train_df) * 100,3))
+```
+
+
+
+
+
+#4 Modeling
+```{r}
+
+train_df_trans <- train_df %>%
+  mutate(MSSubClass = as.factor(MSSubClass),
+         OverallCond = as.factor(OverallCond),
+         YrSold = as.factor(YrSold), 
+         MoSold = as.factor(MoSold)) %>%
+  mutate_if(base::is.character, base::as.factor) %>%
+  select(-Id)
+
+
+test_df <- test_df %>%
+  mutate(MSSubClass = as.factor(MSSubClass),
+         OverallCond = as.factor(OverallCond),
+         YrSold = as.factor(YrSold), 
+         MoSold = as.factor(MoSold)) %>%
+  mutate_if(base::is.character, base::as.factor) %>%
+  select(-Id)
+
+
+train_df_trans_h2o <- as.h2o(train_df_trans)
+test_df <- as.h2o(test_df)
+
+Y <- "SalePrice"
+X <- setdiff(names(train_df_trans_h2o), Y)
+prices_auml <- h2o.automl(x = X,
+                          y = Y, 
+                          nfolds = 5, training_frame = train_df_trans_h2o, max_runtime_secs = 3600)
+
+
+prices_auml@leader %>%
+  h2o.performance(newdata = test_df) 
+
+h2o.mse()
+```
