@@ -8,6 +8,7 @@ output: html_document
 ```{r Load Libraries ,warning=F, message=F}
 library(tidyverse)
 library(e1071)
+library(recipes)
 ```
 
 
@@ -295,4 +296,48 @@ cowplot::plot_grid(p1_saleprice_Hist, p1_saleprice_QQ,
 
 Now, the target variable SalePrice are more normally distributed.
 
+
+# 4.Modeling
+
+```{r}
+
+
+
+
+```
+
+
+Correlation
+```{r}
+cor(train_df %>%
+      select_if(Log_Sales_Price))
+```
+
+
+```{r}
+train_df %>%
+  pull(Utilities) %>%
+  table
+#we should remove Utilities
+rec_obj <- recipe(SalePrice ~ . , data = train_df %>%
+                    select(-Id, -Log_Sales_Price)) %>%
+  step_zv(all_predictors()) %>%
+  step_dummy(all_nominal())
+  
+
+train_model <- bake(rec_obj, new_data = train_df)
+
+
+
+lm_fit <- lm(SalePrice ~ .,data = train_model)
+summary(lm_fit)
+
+
+```
+
+#### Variables Selections
+
+```{r}
+olsrr::ols_step_forward_p(model = lm_fit)
+```
 
