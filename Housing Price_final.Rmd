@@ -1,0 +1,298 @@
+---
+title: "Housing Price"
+author: "jianwen wu"
+date: "4/27/2019"
+output: html_document
+---
+# 1. Set Up
+```{r Load Libraries ,warning=F, message=F}
+library(tidyverse)
+library(e1071)
+```
+
+
+```{r Import the data, message=F, warning=FALSE}
+train_df <- read_csv("data/training.csv")
+
+test_df <- read_csv("data/validation.csv")
+```
+
+
+
+# 2. Data Understanding
+
+### 2.1 structure of data
+```{r str of data}
+train_df %>%
+  map(
+    .f = function(x){
+    class(x)
+  }
+) %>% 
+  as_tibble() %>%
+  gather()
+
+```
+
+
+
+# 3. Data Processing
+
+#### Step 1
+
+We know the numerical variables below are actually categorical variables. We need to transform variables below into factors.
+
+* MSSubClass
+* OverallCond
+* YrSold
+* MoSold
+
+#### Step 2
+
+According to the data description, NA refers to "None" for the variables below. We are going to fill NA with None for those variables
+
+For example, PoolQC with NA means No PoolQC
+
+* PoolQC
+* MiscFeatur
+* Alley
+* Fence
+* FireplaceQu
+* GarageType
+* GarageFinish
+* GarageQual
+* GarageCond
+* BsmtQual
+* BsmtCond
+* BsmtExposure
+* BsmtFinType1
+* BsmtFinType2
+
+#### Step 3
+We are going to fill NA with median of LotFrotage group by Neighborhood
+
+
+#### Step 4
+
+We are going to fill NA with 0 for the variables below:
+
+* GarageYrBlt
+* GarageArea
+* GarageCars
+* BsmtFinSF1
+* BsmtFinSF2
+* BsmtUnfSF
+* TotalBsmtSF
+* BsmtFullBath
+* BsmtHalfBath
+* MasVnrArea
+
+
+#### Step 5
+
+* Electrical - only has one NA value, I am going to assign it to SBrkr. Since this variable contains 91% SBrkr.
+
+
+```{r}
+data_process <- function(data){
+  
+  #combine train and test ----
+  #create factor ----
+  
+  df <- data %>%
+      mutate(MSSubClass = as.factor(MSSubClass),
+             OverallCond = as.factor(OverallCond),
+             YrSold = as.factor(YrSold), 
+             MoSold = as.factor(MoSold))
+  # fill na with none ----
+  NA_cols_None <- c("PoolQC",
+                    "MiscFeature",
+                    "Alley",
+                    "Fence",
+                    "FireplaceQu",
+                    "GarageType",
+                    "GarageFinish",
+                    "GarageQual",
+                    "GarageCond",
+                    "BsmtQual",
+                    "BsmtCond",
+                    "BsmtExposure",
+                    "BsmtFinType1",
+                    "BsmtFinType2",
+                    "MasVnrType",
+                    "MSSubClass")
+  
+  df[,NA_cols_None][is.na(df[,NA_cols_None])] <- "None"
+  
+  # fill na with median ----
+  df <- df %>%
+    group_by(Neighborhood) %>%
+    mutate(LotFrontage = replace_na(LotFrontage, replace = median(LotFrontage, na.rm = T))) %>%
+    ungroup()
+  
+  
+  # fill na with 0 ----
+  NA_cols_0 <- (c(
+    "GarageYrBlt",
+    "GarageArea",
+    "GarageCars",
+    "BsmtFinSF1",
+    "BsmtFinSF2",
+    "BsmtUnfSF",
+    "TotalBsmtSF",
+    "BsmtFullBath",
+    "BsmtHalfBath",
+    "MasVnrArea"
+  ))
+  
+  df[,NA_cols_0][is.na(df[,NA_cols_0])] <- 0
+  
+  #fill na with most frequently ----
+  df <- df %>%
+    mutate(Electrical = str_replace_na(string = Electrical, replacement = "SBrkr"))
+  
+  
+  
+  return(df)
+}
+
+
+```
+
+
+
+```{r}
+
+train_df <- data_process(train_df)
+
+#check the missing value again
+train_df %>%
+  map(.f = function(x){
+    sum(is.na(x))
+  })  %>%
+  as_tibble() %>%
+  gather(key = "Varible", value =  "Number_of_Missing_Value") %>%
+  arrange(desc(Number_of_Missing_Value)) %>%
+  mutate(Percentage = round(Number_of_Missing_Value / nrow(train_df) * 100,3))
+```
+
+
+#### Step 7
+
+we want to see are there outlier in the variable below,
+
+* GarageArea
+
+
+```{r}
+p1_outlier <- train_df %>%
+  ggplot(aes(GarageArea, SalePrice)) +
+  geom_point() +
+  theme_bw() +
+  labs(title = "before removed ouliters")
+
+p1_outlier
+```
+
+It seem like it's more safe to remove the outliers. Those outliers are huge and bad.
+
+```{r}
+# removing outliers recomended by author
+train_df <- train_df %>%
+  filter(GrLivArea < 4000)
+
+p2_outlier <- train_df %>%
+  ggplot(aes(GarageArea, SalePrice)) +
+  geom_point() +
+  theme_bw() +
+  labs(title = "after removed ouliters")
+
+cowplot::plot_grid(p1_outlier, p2_outlier)
+```
+
+There might be more outliers in other variables, but removing all of them might affect our model. such as less observation, and there might be outliers in our test data as well.  Therefore, we just removed the outlier for variable "GrlivArea".
+
+
+
+#### Step 8
+
+* Skewness of Target Varible - SalePrice
+
+```{r}
+#Histogram of SalePrice
+p1_saleprice_Hist <- train_df %>%
+  ggplot(aes()) +
+  geom_histogram(aes(SalePrice), fill = "white", 
+                 color = "black", bins = 30)  +
+  theme_bw() +
+  labs(y = NULL)
+
+p1_saleprice_Hist
+
+#QQ plot of SalePrice
+
+p1_saleprice_QQ  <- train_df %>%
+  ggplot(aes(sample = SalePrice)) +
+  stat_qq() +
+  stat_qq_line() + 
+  theme_bw() +
+  labs(y = "Sales Price")
+
+
+
+
+# p1_saleprice_QQ <- car::qqPlot(train_df$SalePrice, 
+#             ylab = "SalesPrice")
+
+p1_saleprice_QQ
+
+#Skewness of SalePrice
+glue::glue("The Skewness is: {round(skewness(
+           train_df$SalePrice),4)}")
+
+
+```
+
+The target variable SalePrice is right skewed.  We need to transform the target variable SalePrice into more normally distributed.
+
+We are going to use log-transformation
+```{r}
+#Create a log SalePrice variable
+train_df$Log_Sales_Price <- log(train_df$SalePrice)
+train_df$Log_Sales_Price <- log(train_df$SalePrice)
+
+#Histogram of log SalePrice
+
+p2_log_saleprice_Hist <- train_df %>%
+  ggplot(aes()) +
+  geom_histogram(aes(Log_Sales_Price), fill = "white", 
+                 color = "black", bins = 30)  +
+  theme_bw() +
+  labs(y = NULL)
+
+#QQ plot of log SalePrice
+
+p2_log_saleprice_QQ  <- train_df %>%
+  ggplot(aes(sample = Log_Sales_Price)) +
+  stat_qq() +
+  stat_qq_line() + 
+  theme_bw() +
+  labs(y = "Log Sales Price")
+# p2_saleprice_QQ <- car::qqPlot(log(train_df$Log_Sales_Price), 
+#             ylab = "Log SalesPrice")
+
+
+#Skewness of log SalePrice
+glue::glue("The Skewness is: {round(skewness(train_df$Log_Sales_Price),4)}")
+
+
+cowplot::plot_grid(p1_saleprice_Hist, p1_saleprice_QQ,
+                   p2_log_saleprice_Hist, p2_log_saleprice_QQ,
+                   ncol = 2)
+
+```
+
+
+Now, the target variable SalePrice are more normally distributed.
+
+
