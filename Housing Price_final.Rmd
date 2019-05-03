@@ -2,7 +2,9 @@
 title: "Housing Price"
 author: "jianwen wu"
 date: "4/27/2019"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 # 1. Set Up
 ```{r Load Libraries ,warning=F, message=F}
@@ -51,6 +53,8 @@ We know the numerical variables below are actually categorical variables. We nee
 * OverallCond
 * YrSold
 * MoSold
+* OverallQual
+
 
 #### Step 2
 
@@ -108,7 +112,8 @@ data_process <- function(data){
       mutate(MSSubClass = as.factor(MSSubClass),
              OverallCond = as.factor(OverallCond),
              YrSold = as.factor(YrSold), 
-             MoSold = as.factor(MoSold))
+             MoSold = as.factor(MoSold),
+             OverallQual = as.factor(OverallQual))
   # fill na with none ----
   NA_cols_None <- c("PoolQC",
                     "MiscFeature",
@@ -163,7 +168,6 @@ data_process <- function(data){
 
 
 ```
-
 
 
 ```{r}
@@ -227,8 +231,8 @@ There might be more outliers in other variables, but removing all of them might 
 #Histogram of SalePrice
 p1_saleprice_Hist <- train_df %>%
   ggplot(aes()) +
-  geom_histogram(aes(SalePrice), fill = "white", 
-                 color = "black", bins = 30)  +
+  geom_histogram(aes(SalePrice), fill = "blue", 
+                 color = "white", bins = 30)  +
   theme_bw() +
   labs(y = NULL)
 
@@ -270,8 +274,8 @@ train_df$Log_Sales_Price <- log(train_df$SalePrice)
 
 p2_log_saleprice_Hist <- train_df %>%
   ggplot(aes()) +
-  geom_histogram(aes(Log_Sales_Price), fill = "white", 
-                 color = "black", bins = 30)  +
+  geom_histogram(aes(Log_Sales_Price), fill = "blue", 
+                 color = "white", bins = 30)  +
   theme_bw() +
   labs(y = NULL)
 
@@ -300,27 +304,36 @@ cowplot::plot_grid(p1_saleprice_Hist, p1_saleprice_QQ,
 
 Now, the target variable SalePrice are more normally distributed.
 
+#### Step 9
 
-# 4.Modeling
-
-#### Bar plot - Categrical Variables vs SalePrice
+* YearBuilt - we are going to split this variable into yearbuilt < 1950 as old and yearbult >= 1950 as new.
 
 ```{r}
+train_df <- train_df %>%
+  mutate(YearBuilt = ifelse(YearBuilt >= 1950, "New", "Old"))
+```
 
+
+#4. Explore the data more
+
+Bar plot - Categrical Variables vs Log-SalePrice
+
+```{r}
 df_fac <- train_df %>%
   mutate_if(is.factor, as.character) %>%
   select_if(is.character)
 
-n <- as.list(rep("", 47)) 
-p <- as.list(rep("", 47)) 
+n <- as.list(rep("", 49)) 
+p <- as.list(rep("", 49)) 
 
-for (i in 1:47){
+for (i in 1:49){
   
   n[[i]]<- print(colnames(df_fac[i]),quote=FALSE)
   
-  p[[i]]<- ggplot(data=train_df, aes_string (x= n[[i]], y="SalePrice")) +
+  p[[i]] <- ggplot(data=train_df, aes_string(x= n[[i]], y="Log_Sales_Price")) +
     geom_bar(stat="identity", color = "blue") +
-    theme_bw()
+    theme_bw() +
+    labs(y = NULL)
   }
 
 
@@ -333,7 +346,8 @@ cowplot::plot_grid(p[[21]], p[[22]], p[[23]], p[[24]],p[[25]], p[[26]], p[[27]],
 
 cowplot::plot_grid(p[[31]], p[[32]], p[[33]], p[[34]],p[[35]], p[[36]], p[[37]], p[[38]], p[[39]], p[[40]], ncol = 2)
 
-cowplot::plot_grid(p[[41]], p[[42]], p[[43]], p[[44]], p[[45]], p[[46]], p[[47]], ncol = 2)
+cowplot::plot_grid(p[[41]], p[[42]], p[[43]], p[[44]], p[[45]], p[[46]], p[[47]],
+                   p[[49]], ncol = 2)
 
 
 ```
@@ -341,7 +355,7 @@ cowplot::plot_grid(p[[41]], p[[42]], p[[43]], p[[44]], p[[45]], p[[46]], p[[47]]
 
 #### Correlation for Numerical Variables
 
-```{r}
+```{r, fig.height = 9 }
 get_cor <- function(data, target, use = "pairwise.complete.obs",
                     fct_reorder = FALSE, fct_rev = FALSE) {
     
@@ -352,7 +366,7 @@ get_cor <- function(data, target, use = "pairwise.complete.obs",
         mutate_if(is.character, as.factor) %>%
         mutate_if(is.factor, as.numeric) %>%
         cor(use = use) %>%
-        as.tibble() %>%
+        as_tibble() %>%
         mutate(feature = names(.)) %>%
         select(feature, !! feature_expr) %>%
         filter(!(feature == feature_name)) %>%
@@ -406,46 +420,69 @@ plot_cor <- function(data, target, fct_reorder = FALSE, fct_rev = FALSE,
 
 train_df %>%
   select_if(is.numeric) %>%
-  select(-Id, -Log_Sales_Price) %>%
-  plot_cor(SalePrice)
+  select(-Id, -SalePrice) %>%
+  plot_cor(Log_Sales_Price,fct_reorder = T)
 
 ```
 
 
-```{r}
+
+```{r, echo=F}
 train_df %>%
-  pull(Utilities) %>%
-  table
-#we should remove Utilities
-rec_obj <- recipe(Log_Sales_Price ~ . , data = train_df %>%
-                    select(-Id)) %>%
-  step_zv(all_predictors()) %>%
-  step_scale(all_numeric()) %>%
-  step_center(all_numeric()) %>%
-  prep()
-  
-
-train_model <- bake(rec_obj, new_data = train_df)
-
-
-
-lm_fit <- lm(Log_Sales_Price ~ .-GrLivArea,data = train_model %>%
-               select_if(is.numeric) %>%
-               select(-SalePrice))
-
-
-
-
+  select_if(is.numeric) %>%
+  select(-Id, -SalePrice) %>%
+  get_cor(target = Log_Sales_Price) %>%
+  arrange(desc(Log_Sales_Price)) %>%
+  filter(Log_Sales_Price > 0.6 |Log_Sales_Price < -0.50)
 ```
 
-#### Variables Selections
+
+#5. Variables Selections
+
+* GrLivArea = 1st + 2nd SF
+* GarageArea
+* TotalBsmtSF = BSMT 1st + 2nd
+* Add 4 bathroom variables up: Total Bathroom
+* GarageCars
+* TotRmsAbvGrd 
+* BedroomAbvGr
+* YearBuilt = Old New (1950)
+* ExterQual
+* Neighborhood
+* BldgType
+* OverallQuality
+* HeatingQC
+* SaleType = COD, Contract, New, WD
+
 
 ```{r}
-library(olsrr)
-ols_step_forward_p(model = lm_fit, data = train_df %>%
-               select_if(is.numeric) %>%
-               select(-Id, -SalePrice),details = T)
+train_df_model <- train_df %>%
+  select(GrLivArea, GarageArea, TotalBsmtSF, BsmtFullBath,
+         BsmtHalfBath, FullBath, HalfBath, TotRmsAbvGrd, BedroomAbvGr,
+         YearBuilt, ExterQual, Neighborhood,BldgType,OverallQual,HeatingQC, Log_Sales_Price) %>%
+  mutate(Total_Bathroom = BsmtFullBath +
+         BsmtHalfBath + FullBath + HalfBath) %>%
+  select(-BsmtFullBath, -BsmtHalfBath, -FullBath, -HalfBath) %>%
+  mutate(YearBuilt = as.factor(YearBuilt) %>%
+           fct_relevel(c("Old", "New")))
+str(train_df_model)
+```
+
+```{r} 
+rej_obj <- recipe(Log_Sales_Price~., data = train_df_model) %>%
+  step_dummy(all_nominal(), -OverallQual) %>%
+  prep()
 
 
+train_df_model_lm <- bake(rej_obj, new_data = train_df_model)
+
+lm_fit <- lm(Log_Sales_Price ~., data = train_df_model_lm)
+
+summary(lm_fit)
+
+olsrr::ols_step_forward_aic(lm_fit, data = train_df_model_lm,detail = T)
+```
+```{r}
+plot(l$arsq)
 ```
 
