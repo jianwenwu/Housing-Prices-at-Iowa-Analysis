@@ -5,14 +5,12 @@ author:
 - \emph{NITASHA TULI}
 - \emph{THOMAS KWOK}
 date: "`r format(Sys.time(), '%d %B %Y')`"
-output:
-  pdf_document:
-    toc: TRUE
+output: pdf_document
 fontsize: 10pt
 ---
 
 
-```{r load libraries, warning=F, message=F, echo=F}
+```{r set up, warning=F, message=F, echo=F}
 library(recipes)
 library(olsrr)
 library(tidyverse)
@@ -24,13 +22,13 @@ library(forcats)
 library(tidyquant)
 ```
 
-```{r import data, warning=F, message=F, echo=F}
+```{r Import data, warning=F, message=F, echo=F}
 train_df <- read_csv("data/training.csv")
 test_df <- read_csv("data/validation.csv")
 ```
 
 
-```{r data cleaning, echo = F}
+```{r Data Cleaning, echo = F}
 
 data_process <- function(data, train = T, test = F, cor_df = F){
   
@@ -416,6 +414,7 @@ We decide to split categorical variables into dummy variables except the predict
 We fitted a multiple linear regression model with all 43 variables. The R Square is 0.8869 and Adjust R Square is 0.8812. 
 
 ```{r lm, echo = F,results='hide'}
+#linear fit on 43 variables
 lm_fit <- lm(Log_Sale_Price ~., data = train_processed_model) 
 
 summary(lm_fit)
@@ -426,6 +425,7 @@ The model was too complexity and was hard to explain. we performed a stepwise AI
 
 #### Below is the results of Stepwise AIC Forward Regression
 ```{r, echo  = F, results='hide'}
+#stepwise aic forward regression on 43 variables
 lm_fw_aic <- ols_step_forward_aic(lm_fit)
 ```
 
@@ -459,6 +459,7 @@ In the plot above, we plotted all 27 variables that was chosen by stepwise AIC f
 
 ### THE RESPONSE FUNCTION
 ```{r responsed function, echo=F}
+#response function for 27 variables selected from forward aic regression
 lm_fw_aic$model %>%
   summary() %>%
   pander::pander()
@@ -490,8 +491,8 @@ p2_hist <- ols_plot_resid_hist(lm_fw_aic$model)
 ```
 
 ```{r, echo = F, fig.height=3.5}
+#combine those qq and histogram together
 cowplot::plot_grid(p1_qq, p2_hist)
-
 ```
 
 The QQ plot -  The residual points roughly lie within the lines. The Q-Q plot of the residuals suggests that the error terms are indeed normally distributed.
@@ -501,6 +502,7 @@ The histogram - The errors terms are indeed normally distributed.
 \newpage
 #### Residual vs Fitted Values Plot.
 ```{r, echo =F,  fig.height=3.5 }
+#residual vs fitted value
 ols_plot_resid_fit(lm_fw_aic$model)
 ```
 
@@ -515,6 +517,7 @@ ols_plot_resid_fit(lm_fw_aic$model)
 #### Correlation between actual log sale price and predicted log sale price on train data
 
 ```{r, echo = F,  fig.height=3.5}
+# scatter plot of actual log sale price vs predicted log sale price
 tibble(
   actual = train_processed_model$Log_Sale_Price,
   predicted = lm_fw_aic$model$fitted.values
@@ -605,7 +608,7 @@ From the plot above, we can see the actual sale price and predicted sale price a
 
 ####  Table 1. The metrics on the full model with 44 variables
 ```{r, echo = F}
-
+#test performance on full model 
 tibble(
   Bias = bias(y_hat_test_full_model, y_test),
   Maximum_Deviation = Max_Dev(y_hat_test_full_model, y_test),
@@ -618,7 +621,7 @@ tibble(
 
 #### Table 2. The metrics on the reduced model with 27 variables
 ```{r, echo  = F}
-#test
+#test performance on reduced model 
 tibble(
   Bias = bias(y_hat_test, y_test),
   Maximum_Deviation = Max_Dev(y_hat_test, y_test),
@@ -634,9 +637,13 @@ Table 1 and Table 2 are the performance metrics of full model(43 variables) and 
 
 
 
-### Conclusion
+### CONCLUSION
 
 In conclusion, by running a linear model with our 27 variables, we found that our adjusted R-square was .88176. We determined that the error terms were normally distributed and that our relationship was linear, which supported the choice of our model. We found a strong correlation between actual log sale price and predicted log sale price. The model performance on our test set is shown above and in the end we found a good combination of numeric and categorical variables led to the best prediction for Sales Price. Overall Quality was the most important predictor, followed by Living Area and Year Built. These three variables lay the foundation of buying a house, with many accessories after which increase the Sales Price of a house after. There were many variables that highly correlate with one another, which makes sense as people who buy houses often look at similar qualities of houses when choosing.
 
 In the end, there were a few variables that we also considered using such as MS Zone and Sales Type which we thought could also also influenced Sale Price, but they were either too difficult to interpret or code to get the most out of the data so we did not include them. But in the end of the day, these would also be more "accessories" than foundations that would help explain the Sale Price of a house.
 
+
+### CODE APPENDIX
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+```
