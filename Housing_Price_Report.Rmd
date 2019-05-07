@@ -485,7 +485,7 @@ lm_fw_aic$model %>%
   pander::pander()
 ```
 
-We can see from the responded function that neighbourhood like StoneBr, Timber, Brkside, Somrest shows a posi-tive relationship with sale price whereas neighbor like meadow and Brdale shows negative relationship with log sale price
+We can see from the responded function that neighborhood like StoneBr, Timber, Brkside, Somrest shows a positive relationship with sale price whereas neighbor like meadow and Brdale shows negative relationship with log sale price
 
 
 ### MODEL DIAGNOSTICS
@@ -512,7 +512,7 @@ ols_plot_resid_hist(lm_fw_aic$model)
 
 The QQ plot -  The residual points roughly lie within the lines. The Q-Q plot of the residuals suggests that the error terms are indeed normally distributed.
 
-The histogtram - The errors terms are indeed normally distributed.
+The histogram - The errors terms are indeed normally distributed.
 
 
 ###### Residual vs Fitted Values Plot.
@@ -543,9 +543,9 @@ cor(train_processed_model$Log_Sales_Price,
     lm_fw_aic$model$fitted.values)
 ```
 
-Based on the graph above, we can see that our model performed very good.  The correlation between acutal log sale price and predicted log sale price is 0.94.
+Based on the graph above, we can see that our model performed very good.  The correlation between actual log sale price and predicted log sale price is 0.94.
 
-Ourvall, our model satisfied the linear regression assumptions.
+Overall, our model satisfied the linear regression assumptions.
 
 ### PREDICTION ON TEST SET
 
@@ -613,4 +613,6 @@ The table above is our model performance on test set.
 # write.csv(predicted_value, "Predictied_Value.csv", na = "", row.names = F)
 ```
 
+Conclusion:
 
+In conclusion, by running a linear model with our 27 variables, we found that our adjusted R-square was .88176. We determined that the error terms were normally distributed and that our relationship was linear, which supported the choice of our model. We found a strong correlation between actual log sale price and predicted log sale price. The model performance on our test set is shown above and in the end we found a good combination of numeric and categoric variables led to the best prediction for Sales Price. 
