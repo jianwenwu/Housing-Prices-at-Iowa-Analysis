@@ -321,6 +321,7 @@ variables.
 
 #### THE RESPONSE FUNCTION
 
+
 |                           | Estimate  | Std. Error | t value | Pr(\>|t|) |
 | :-----------------------: | :-------: | :--------: | :-----: | :-------: |
 |      **(Intercept)**      |   10.73   |   0.149    |  71.99  |     0     |
