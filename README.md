@@ -1,10 +1,5 @@
-
 HOUSING PRICE: USING ADVANCED REGRESSION TECHNIQUES
 ================
-- ##### JIANWEN WU
-- ##### NITASHA TULI
-- ##### THOMAS KWOK
-
 
 ### INTRODUCTION:
 
@@ -244,63 +239,56 @@ plot shows as the number of variables increased, the adjust R-Squared
 increased as well. we know that adjusted R-Squared is modified version
 of R-squared that has been adjusted for the number of predictors in the
 model, and it penalized number of predictors was added. In conclusion,
-we decided to keep all 27 variables.
+we decided to keep all 27
+variables.
 
 ### THE RESPONSE FUNCTION
 
-    ## 
-    ## Call:
-    ## lm(formula = paste(response, "~", paste(preds, collapse = " + ")), 
-    ##     data = l)
-    ## 
-    ## Residuals:
-    ##      Min       1Q   Median       3Q      Max 
-    ## -0.74819 -0.07141  0.00825  0.07864  0.48432 
-    ## 
-    ## Coefficients:
-    ##                        Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)           1.073e+01  1.490e-01  71.987  < 2e-16 ***
-    ## OverallQual2          1.014e-01  1.645e-01   0.616 0.537740    
-    ## OverallQual3          3.856e-01  1.503e-01   2.565 0.010460 *  
-    ## OverallQual4          4.933e-01  1.485e-01   3.321 0.000928 ***
-    ## OverallQual5          5.900e-01  1.489e-01   3.963 7.91e-05 ***
-    ## OverallQual6          6.613e-01  1.491e-01   4.435 1.02e-05 ***
-    ## OverallQual7          7.453e-01  1.497e-01   4.979 7.48e-07 ***
-    ## OverallQual8          8.337e-01  1.509e-01   5.527 4.14e-08 ***
-    ## OverallQual9          9.797e-01  1.532e-01   6.395 2.44e-10 ***
-    ## OverallQual10         9.975e-01  1.597e-01   6.248 6.11e-10 ***
-    ## GrLivArea             2.470e-04  1.652e-05  14.954  < 2e-16 ***
-    ## YearBuilt_Old        -1.066e-01  1.748e-02  -6.095 1.55e-09 ***
-    ## TotalBsmtSF           1.171e-04  1.343e-05   8.719  < 2e-16 ***
-    ## GarageArea            2.069e-04  2.765e-05   7.484 1.56e-13 ***
-    ## Total_Bathroom        6.020e-02  6.669e-03   9.027  < 2e-16 ***
-    ## Neighborhood_Crawfor  1.851e-01  2.549e-02   7.263 7.51e-13 ***
-    ## HeatingQC_TA         -7.420e-02  1.164e-02  -6.373 2.81e-10 ***
-    ## BldgType_Twnhs       -1.449e-01  3.064e-02  -4.730 2.57e-06 ***
-    ## BldgType_Duplex      -1.187e-01  2.278e-02  -5.212 2.26e-07 ***
-    ## Neighborhood_IDOTRR  -1.622e-01  3.145e-02  -5.157 3.02e-07 ***
-    ## Neighborhood_OldTown -8.257e-02  2.128e-02  -3.881 0.000111 ***
-    ## Neighborhood_ClearCr  1.245e-01  3.154e-02   3.947 8.44e-05 ***
-    ## HeatingQC_Fa         -1.058e-01  2.493e-02  -4.246 2.38e-05 ***
-    ## Neighborhood_BrDale  -1.592e-01  4.734e-02  -3.362 0.000801 ***
-    ## Neighborhood_MeadowV -1.075e-01  4.406e-02  -2.439 0.014895 *  
-    ## Neighborhood_NridgHt  1.014e-01  2.392e-02   4.239 2.45e-05 ***
-    ## Neighborhood_Veenker  2.062e-01  7.009e-02   2.942 0.003333 ** 
-    ## HeatingQC_Gd         -3.576e-02  1.303e-02  -2.745 0.006166 ** 
-    ## Neighborhood_Edwards -3.334e-02  1.841e-02  -1.811 0.070426 .  
-    ## ExterQual_Fa         -1.066e-01  4.307e-02  -2.475 0.013487 *  
-    ## BldgType_TwnhsE      -6.654e-02  1.942e-02  -3.427 0.000636 ***
-    ## BedroomAbvGr         -1.939e-02  7.505e-03  -2.583 0.009923 ** 
-    ## Neighborhood_StoneBr  1.272e-01  4.506e-02   2.822 0.004859 ** 
-    ## Neighborhood_Timber   5.862e-02  2.692e-02   2.177 0.029693 *  
-    ## Neighborhood_Somerst  3.764e-02  2.095e-02   1.796 0.072718 .  
-    ## Neighborhood_BrkSide  4.589e-02  2.637e-02   1.740 0.082174 .  
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.1385 on 1020 degrees of freedom
-    ## Multiple R-squared:  0.8857, Adjusted R-squared:  0.8818 
-    ## F-statistic: 225.8 on 35 and 1020 DF,  p-value: < 2.2e-16
+|                           | Estimate  | Std. Error | t value | Pr(\>|t|) |
+| :-----------------------: | :-------: | :--------: | :-----: | :-------: |
+|      **(Intercept)**      |   10.73   |   0.149    |  71.99  |     0     |
+|     **OverallQual2**      |  0.1014   |   0.1645   | 0.6164  |  0.5377   |
+|     **OverallQual3**      |  0.3856   |   0.1503   |  2.565  |  0.01046  |
+|     **OverallQual4**      |  0.4933   |   0.1485   |  3.321  | 0.0009277 |
+|     **OverallQual5**      |   0.59    |   0.1489   |  3.963  | 7.913e-05 |
+|     **OverallQual6**      |  0.6613   |   0.1491   |  4.435  | 1.022e-05 |
+|     **OverallQual7**      |  0.7453   |   0.1497   |  4.979  | 7.485e-07 |
+|     **OverallQual8**      |  0.8337   |   0.1509   |  5.527  | 4.145e-08 |
+|     **OverallQual9**      |  0.9797   |   0.1532   |  6.395  | 2.437e-10 |
+|     **OverallQual10**     |  0.9975   |   0.1597   |  6.248  | 6.109e-10 |
+|       **GrLivArea**       | 0.000247  | 1.652e-05  |  14.95  | 7.292e-46 |
+|    **YearBuilt\_Old**     | \-0.1066  |  0.01748   | \-6.095 | 1.55e-09  |
+|      **TotalBsmtSF**      | 0.0001171 | 1.343e-05  |  8.719  | 1.125e-17 |
+|      **GarageArea**       | 0.0002069 | 2.765e-05  |  7.484  | 1.559e-13 |
+|    **Total\_Bathroom**    |  0.0602   |  0.006669  |  9.027  | 8.624e-19 |
+| **Neighborhood\_Crawfor** |  0.1851   |  0.02549   |  7.263  | 7.511e-13 |
+|     **HeatingQC\_TA**     | \-0.0742  |  0.01164   | \-6.373 | 2.807e-10 |
+|    **BldgType\_Twnhs**    | \-0.1449  |  0.03064   | \-4.73  | 2.565e-06 |
+|   **BldgType\_Duplex**    | \-0.1187  |  0.02278   | \-5.212 | 2.258e-07 |
+| **Neighborhood\_IDOTRR**  | \-0.1622  |  0.03145   | \-5.157 | 3.015e-07 |
+| **Neighborhood\_OldTown** | \-0.08257 |  0.02128   | \-3.881 | 0.0001108 |
+| **Neighborhood\_ClearCr** |  0.1245   |  0.03154   |  3.947  | 8.44e-05  |
+|     **HeatingQC\_Fa**     | \-0.1058  |  0.02493   | \-4.246 | 2.376e-05 |
+| **Neighborhood\_BrDale**  | \-0.1592  |  0.04734   | \-3.362 | 0.0008012 |
+| **Neighborhood\_MeadowV** | \-0.1075  |  0.04406   | \-2.439 |  0.0149   |
+| **Neighborhood\_NridgHt** |  0.1014   |  0.02392   |  4.239  | 2.446e-05 |
+| **Neighborhood\_Veenker** |  0.2062   |  0.07009   |  2.942  | 0.003333  |
+|     **HeatingQC\_Gd**     | \-0.03576 |  0.01303   | \-2.745 | 0.006166  |
+| **Neighborhood\_Edwards** | \-0.03334 |  0.01841   | \-1.811 |  0.07043  |
+|     **ExterQual\_Fa**     | \-0.1066  |  0.04307   | \-2.475 |  0.01349  |
+|   **BldgType\_TwnhsE**    | \-0.06654 |  0.01942   | \-3.427 | 0.0006356 |
+|     **BedroomAbvGr**      | \-0.01939 |  0.007505  | \-2.583 | 0.009923  |
+| **Neighborhood\_StoneBr** |  0.1272   |  0.04506   |  2.822  | 0.004859  |
+| **Neighborhood\_Timber**  |  0.05862  |  0.02692   |  2.177  |  0.02969  |
+| **Neighborhood\_Somerst** |  0.03764  |  0.02095   |  1.796  |  0.07272  |
+| **Neighborhood\_BrkSide** |  0.04589  |  0.02637   |  1.74   |  0.08217  |
+
+| Observations | Residual Std. Error | \(R^2\) | Adjusted \(R^2\) |
+| :----------: | :-----------------: | :-----: | :--------------: |
+|     1056     |       0.1385        | 0.8857  |      0.8818      |
+
+Fitting linear model: paste(response, “~”, paste(preds, collapse = " +
+"))
 
 We can see from the responded function that neighbourhood like StoneBr,
 Timber, Brkside, Somrest shows a posi-tive relationship with sale price
