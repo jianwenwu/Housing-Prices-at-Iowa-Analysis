@@ -146,32 +146,32 @@ variables to draw more meaningful insights.
 
 Our final list of variables is as follows
 
-  - GrLivArea(1st + 2nd SF): Above the ground living surface area.
+  - **GrLivArea(1st + 2nd SF)**: Above the ground living surface area.
 
-  - GarageArea: Size of garage in square feet.
+  - **GarageArea**: Size of garage in square feet.
 
-  - TotalBsmtSF(BSMT 1st + 2nd): Total square feet of basement area.
+  - **TotalBsmtSF(BSMT 1st + 2nd)**: Total square feet of basement area.
 
-  - Total Bathroom: Add 4 bathroom variables up
+  - **Total Bathroom**: Add 4 bathroom variables up
 
-  - GarageCars: Size of garage in car capacity.
+  - **GarageCars**: Size of garage in car capacity.
 
-  - TotRmsAbvGrd: Total rooms above the ground does not include bathroom
+  - **TotRmsAbvGrd**: Total rooms above the ground does not include bathroom
 
-  - BedroomAbvGr: Number of bedrooms
+  - **BedroomAbvGr**: Number of bedrooms
 
-  - YearBuilt(categorical): Divided this variable in two categories old
+  - **YearBuilt(categorical)**: Divided this variable in two categories old
     and new based.
 
-  - ExterQual(categorical): Exterior material quality
+  - **ExterQual(categorical)**: Exterior material quality
 
-  - Neighborhood(categorical): Physical location
+  - **Neighborhood(categorical)**: Physical location
 
-  - BldgType(categorical): Type of dwelling
+  - **BldgType(categorical)**: Type of dwelling
 
-  - OverallQual(categorical): Overall material and finish quality
+  - **OverallQual(categorical)**: Overall material and finish quality
 
-  - HeatingQC(categorical) : Heating quality and condition
+  - **HeatingQC(categorical)** : Heating quality and condition
 
 We decide to split categorical variables into dummy variables except the
 predictor “OverallQual”. In total we had fourteen variables chosen, but
